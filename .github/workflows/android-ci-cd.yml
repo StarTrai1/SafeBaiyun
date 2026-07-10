@@ -56,8 +56,8 @@ jobs:
             exit 0
           fi
 
-          grep -E '^(e: |FAILURE:|\* What went wrong:|Execution failed for task)' \
-            "$build_log" | tail -n 20 | while IFS= read -r line; do
+          grep -Ei '^(e: |FAILURE:|\* What went wrong:|Execution failed for task|> )|manifest merger failed|uses-sdk:minSdkVersion|Suggestion:' \
+            "$build_log" | tail -n 40 | while IFS= read -r line; do
             echo "::error::$line"
           done
           exit 1
@@ -76,7 +76,10 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: SafeBaiyun-reports-${{ github.run_id }}-${{ github.run_attempt }}
-          path: app/build/reports/
+          path: |
+            app/build/reports/
+            app/build/outputs/logs/
+            ${{ runner.temp }}/gradle-checks.log
           if-no-files-found: ignore
           retention-days: 14
 

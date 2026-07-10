@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "cn.huacheng.safebaiyun"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 34
         versionCode = 6
         versionName = "1.3.0"
