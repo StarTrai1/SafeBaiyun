@@ -128,13 +128,51 @@ jobs:
             | base64 --decode > "$RUNNER_TEMP/safebaiyun-release.jks"
           test -s "$RUNNER_TEMP/safebaiyun-release.jks"
 
+      - name: Validate release keystore
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/safebaiyun-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if keytool -list \
+            -keystore "$ANDROID_KEYSTORE_PATH" \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias "$ANDROID_KEY_ALIAS" >/dev/null; then
+            exit 0
+          fi
+          echo "::error::Unable to open the release keystore with the configured password and alias"
+          exit 1
+
       - name: Build signed release APK
+        shell: bash
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/safebaiyun-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew --no-daemon --stacktrace assembleRelease
+        run: |
+          set -o pipefail
+          build_log="$RUNNER_TEMP/gradle-release.log"
+          if ./gradlew --no-daemon --stacktrace \
+            validateSigningRelease assembleRelease 2>&1 | tee "$build_log"; then
+            exit 0
+          fi
+
+          grep -Ei '^(e: |FAILURE:|\* What went wrong:|Execution failed for task|> )|keystore|password|alias|signing|missing class|r8' \
+            "$build_log" | tail -n 30 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
+          exit 1
+
+      - name: Upload release build log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: SafeBaiyun-release-log-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gradle-release.log
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Verify release APK signature
         shell: bash
