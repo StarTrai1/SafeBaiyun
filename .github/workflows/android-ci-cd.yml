@@ -125,32 +125,54 @@ jobs:
 
           umask 077
           printf '%s' "$ANDROID_KEYSTORE_BASE64" \
-            | base64 --decode > "$RUNNER_TEMP/safebaiyun-release.jks"
-          test -s "$RUNNER_TEMP/safebaiyun-release.jks"
+            | base64 --decode > "$RUNNER_TEMP/safebaiyun-source.keystore"
+          test -s "$RUNNER_TEMP/safebaiyun-source.keystore"
 
-      - name: Validate release keystore
+      - name: Normalize release keystore
         shell: bash
         env:
-          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/safebaiyun-release.jks
+          SOURCE_KEYSTORE_PATH: ${{ runner.temp }}/safebaiyun-source.keystore
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/safebaiyun-release.p12
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if keytool -list \
-            -keystore "$ANDROID_KEYSTORE_PATH" \
-            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
-            -alias "$ANDROID_KEY_ALIAS" >/dev/null; then
+          normalize_keystore() {
+            keytool -importkeystore \
+              -srckeystore "$SOURCE_KEYSTORE_PATH" \
+              -srcstorepass "$ANDROID_KEYSTORE_PASSWORD" \
+              -srcalias "$ANDROID_KEY_ALIAS" \
+              -srckeypass "$1" \
+              -destkeystore "$ANDROID_KEYSTORE_PATH" \
+              -deststoretype PKCS12 \
+              -deststorepass "$ANDROID_KEYSTORE_PASSWORD" \
+              -destkeypass "$ANDROID_KEYSTORE_PASSWORD" \
+              -destalias "$ANDROID_KEY_ALIAS" \
+              -noprompt
+          }
+
+          if normalize_keystore "$ANDROID_KEY_PASSWORD"; then
             exit 0
           fi
-          echo "::error::Unable to open the release keystore with the configured password and alias"
+
+          rm -f "$ANDROID_KEYSTORE_PATH"
+          if [ "$ANDROID_KEY_PASSWORD" != "$ANDROID_KEYSTORE_PASSWORD" ] \
+            && normalize_keystore "$ANDROID_KEYSTORE_PASSWORD"; then
+            echo "::warning::The key uses the keystore password; ANDROID_KEY_PASSWORD was ignored"
+            exit 0
+          fi
+
+          echo "::error::Unable to import the signing key; check the keystore, alias, and passwords"
           exit 1
 
       - name: Build signed release APK
         shell: bash
         env:
-          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/safebaiyun-release.jks
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/safebaiyun-release.p12
+          ANDROID_KEYSTORE_TYPE: PKCS12
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           set -o pipefail
           build_log="$RUNNER_TEMP/gradle-release.log"

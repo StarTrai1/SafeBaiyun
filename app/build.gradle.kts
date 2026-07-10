@@ -8,6 +8,7 @@ val releaseStorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH").or
 val releaseStorePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD").orNull
 val releaseKeyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS").orNull
 val releaseKeyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD").orNull
+val releaseStoreType = providers.environmentVariable("ANDROID_KEYSTORE_TYPE").orElse("PKCS12").get()
 val hasReleaseSigningConfig = listOf(
     releaseStorePath,
     releaseStorePassword,
@@ -39,6 +40,7 @@ android {
                 storePassword = releaseStorePassword
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
+                storeType = releaseStoreType
             }
         }
     }
