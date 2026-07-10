@@ -291,13 +291,15 @@ object UnlockRepo {
             }
         }
 
-        if (readable == null || writeable == null) {
+        val readableCharacteristic = readable
+        val writableCharacteristic = writeable
+        if (readableCharacteristic == null || writableCharacteristic == null) {
             showToast("门禁蓝牙特征不可用")
             finishUnlock(UnlockResult.FAILURE, gatt)
             return
         }
-        writeableCharacteristic = writeable
-        handleCharacteristics(gatt, notificationCharacteristics, readable)
+        writeableCharacteristic = writableCharacteristic
+        handleCharacteristics(gatt, notificationCharacteristics, readableCharacteristic)
     }
 
     private fun handleCharacteristics(

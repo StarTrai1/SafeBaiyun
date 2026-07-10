@@ -56,7 +56,7 @@ jobs:
             exit 0
           fi
 
-          grep -Ei '^(e: |FAILURE:|\* What went wrong:|Execution failed for task|> )|manifest merger failed|uses-sdk:minSdkVersion|Suggestion:' \
+          grep -Ei '^(e: |FAILURE:|\* What went wrong:|Execution failed for task)|manifest merger failed|uses-sdk:minSdkVersion|Suggestion:' \
             "$build_log" | tail -n 40 | while IFS= read -r line; do
             echo "::error::$line"
           done
@@ -184,7 +184,7 @@ jobs:
             exit 0
           fi
 
-          grep -Ei '^(e: |FAILURE:|\* What went wrong:|Execution failed for task|> )|keystore|password|alias|signing|missing class|r8' \
+          grep -Ei '^(e: |FAILURE:|\* What went wrong:|Execution failed for task)|keystore|password|alias|signing|missing class|r8' \
             "$build_log" | tail -n 30 | while IFS= read -r line; do
             echo "::error::$line"
           done
