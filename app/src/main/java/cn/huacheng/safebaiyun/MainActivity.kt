@@ -10,15 +10,30 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import cn.huacheng.safebaiyun.compose.HelpView
 import cn.huacheng.safebaiyun.compose.MainView
+import cn.huacheng.safebaiyun.shizuku.ShizukuBridge
 import cn.huacheng.safebaiyun.theme.SafeBaiyunTheme
+import cn.huacheng.safebaiyun.unlock.UnlockMode
+import cn.huacheng.safebaiyun.unlock.UnlockModeRepo
+import kotlinx.coroutines.launch
 
 
 class MainActivity : ComponentActivity() {
+
+    override fun onResume() {
+        super.onResume()
+        if (UnlockModeRepo.currentMode() == UnlockMode.SHIZUKU) {
+            lifecycleScope.launch {
+                ShizukuBridge.prepare(this@MainActivity, launchIfStopped = false)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {

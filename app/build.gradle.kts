@@ -22,10 +22,10 @@ android {
 
     defaultConfig {
         applicationId = "cn.huacheng.safebaiyun"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.2.2"
+        versionCode = 6
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -57,6 +57,7 @@ android {
         }
     }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
@@ -64,6 +65,7 @@ android {
         jvmTarget = "1.8"
     }
     buildFeatures {
+        aidl = true
         compose = true
     }
     composeOptions {
@@ -78,6 +80,7 @@ android {
 
 dependencies {
 
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -90,6 +93,8 @@ dependencies {
     implementation(libs.glance)
     implementation(libs.glance.material)
     implementation(libs.navigation)
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 
 
     testImplementation(libs.junit)

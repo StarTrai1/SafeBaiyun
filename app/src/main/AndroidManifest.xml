@@ -6,6 +6,10 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
 
+    <queries>
+        <package android:name="moe.shizuku.privileged.api" />
+    </queries>
+
     <application
         android:name="cn.huacheng.safebaiyun.BaiYunApplication"
         android:allowBackup="true"
@@ -17,6 +21,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SafeBaiyun"
         tools:targetApi="31">
+
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <activity
             android:name="cn.huacheng.safebaiyun.MainActivity"
