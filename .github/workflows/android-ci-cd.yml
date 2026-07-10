@@ -1,0 +1,119 @@
+name: Android CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: "17"
+
+jobs:
+  ci:
+    name: Lint, test, and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+
+      - name: Verify build tool versions
+        run: |
+          java -version
+          ./gradlew --version
+
+      - name: Run checks and build debug APK
+        run: ./gradlew --no-daemon --stacktrace lintDebug testDebugUnitTest assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: SafeBaiyun-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Upload check reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: SafeBaiyun-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: app/build/reports/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  release:
+    name: Publish unsigned release APK
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+
+      - name: Build unsigned release APK
+        run: ./gradlew --no-daemon --stacktrace assembleRelease
+
+      - name: Prepare release asset
+        id: asset
+        shell: bash
+        run: |
+          source_apk="app/build/outputs/apk/release/app-release-unsigned.apk"
+          safe_tag="${GITHUB_REF_NAME//\//-}"
+          output_apk="SafeBaiyun-${safe_tag}-unsigned.apk"
+          test -f "$source_apk"
+          cp "$source_apk" "$output_apk"
+          echo "path=$output_apk" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_APK: ${{ steps.asset.outputs.path }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "$RELEASE_APK#Unsigned APK" --clobber
+          else
+            gh release create "$RELEASE_TAG" "$RELEASE_APK#Unsigned APK" \
+              --verify-tag \
+              --generate-notes \
+              --title "SafeBaiyun $RELEASE_TAG"
+          fi
