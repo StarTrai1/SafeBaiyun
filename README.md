@@ -15,5 +15,5 @@
 ## CI/CD
 
 - 推送到 `main` 或向 `main` 提交 Pull Request 时，执行 lint、单元测试并构建 Debug APK。
-- 推送 `v*` 标签时，在通过 CI 后构建 Release APK 并发布到 GitHub Releases。
-- Release APK 未配置签名，安装或分发前需要使用正式密钥签名。
+- 推送 `v*` 标签时，在通过 CI 后构建、校验签名并将 signed Release APK 发布到 GitHub Releases。
+- Release 签名从 `ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD` 四个 GitHub Actions Secrets 注入；仓库不保存签名密钥。

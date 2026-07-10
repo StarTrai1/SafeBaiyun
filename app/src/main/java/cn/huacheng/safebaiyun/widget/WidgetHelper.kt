@@ -1,5 +1,6 @@
 package cn.huacheng.safebaiyun.widget
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -18,6 +19,11 @@ import cn.huacheng.safebaiyun.util.ContextHolder
  *@create: 2024-05-10
  */
 object WidgetHelper {
+
+    fun createWidgetUnlockIntent(context: Context): Intent =
+        Intent(context, ShortcutActivity::class.java).apply {
+            action = ShortcutActivity.ACTION_WIDGET_UNLOCK
+        }
 
     fun requestPermission() {
         val intent = Intent()

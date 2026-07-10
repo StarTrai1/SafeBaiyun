@@ -68,7 +68,7 @@ jobs:
           retention-days: 14
 
   release:
-    name: Publish unsigned release APK
+    name: Publish signed release APK
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     needs: ci
     runs-on: ubuntu-latest
@@ -89,16 +89,67 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
 
-      - name: Build unsigned release APK
+      - name: Prepare release signing key
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for variable in \
+            ANDROID_KEYSTORE_BASE64 \
+            ANDROID_KEYSTORE_PASSWORD \
+            ANDROID_KEY_ALIAS \
+            ANDROID_KEY_PASSWORD; do
+            if [ -z "${!variable}" ]; then
+              echo "::error::Missing required GitHub secret: $variable"
+              missing=1
+            fi
+          done
+          test "$missing" -eq 0
+
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" \
+            | base64 --decode > "$RUNNER_TEMP/safebaiyun-release.jks"
+          test -s "$RUNNER_TEMP/safebaiyun-release.jks"
+
+      - name: Build signed release APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/safebaiyun-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew --no-daemon --stacktrace assembleRelease
+
+      - name: Verify release APK signature
+        shell: bash
+        run: |
+          signed_apk="app/build/outputs/apk/release/app-release.apk"
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          test -n "$sdk_root"
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner \
+            | sort -V | tail -n 1)"
+          test -n "$apksigner"
+          "$apksigner" verify --verbose --print-certs "$signed_apk"
+
+      - name: Upload signed release APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: SafeBaiyun-signed-${{ github.ref_name }}
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
 
       - name: Prepare release asset
         id: asset
         shell: bash
         run: |
-          source_apk="app/build/outputs/apk/release/app-release-unsigned.apk"
+          source_apk="app/build/outputs/apk/release/app-release.apk"
           safe_tag="${GITHUB_REF_NAME//\//-}"
-          output_apk="SafeBaiyun-${safe_tag}-unsigned.apk"
+          output_apk="SafeBaiyun-${safe_tag}-signed.apk"
           test -f "$source_apk"
           cp "$source_apk" "$output_apk"
           echo "path=$output_apk" >> "$GITHUB_OUTPUT"
@@ -110,9 +161,9 @@ jobs:
           RELEASE_APK: ${{ steps.asset.outputs.path }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" "$RELEASE_APK#Unsigned APK" --clobber
+            gh release upload "$RELEASE_TAG" "$RELEASE_APK#Signed APK" --clobber
           else
-            gh release create "$RELEASE_TAG" "$RELEASE_APK#Unsigned APK" \
+            gh release create "$RELEASE_TAG" "$RELEASE_APK#Signed APK" \
               --verify-tag \
               --generate-notes \
               --title "SafeBaiyun $RELEASE_TAG"

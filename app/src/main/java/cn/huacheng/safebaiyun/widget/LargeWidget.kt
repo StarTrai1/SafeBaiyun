@@ -31,7 +31,6 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import cn.huacheng.safebaiyun.R
-import cn.huacheng.safebaiyun.ShortcutActivity
 
 /**
  *
@@ -53,13 +52,13 @@ object LargeWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             GlanceTheme {
-                WidgetContent()
+                WidgetContent(context)
             }
         }
     }
 
     @Composable
-    private fun WidgetContent() {
+    private fun WidgetContent(context: Context) {
         Column(
             modifier = GlanceModifier
                 .fillMaxWidth()
@@ -83,7 +82,7 @@ object LargeWidget : GlanceAppWidget() {
                         contentDescription = "",
                         backgroundColor = GlanceTheme.colors.primary,
                         contentColor = GlanceTheme.colors.onPrimary,
-                        onClick = actionStartActivity<ShortcutActivity>()
+                        onClick = actionStartActivity(WidgetHelper.createWidgetUnlockIntent(context))
                     )
                 }
             }
@@ -99,4 +98,3 @@ object LargeWidget : GlanceAppWidget() {
     }
 
 }
-

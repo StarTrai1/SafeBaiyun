@@ -25,7 +25,6 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import cn.huacheng.safebaiyun.ShortcutActivity
 import cn.huacheng.safebaiyun.R
 
 /**
@@ -48,13 +47,13 @@ object MediumWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             GlanceTheme {
-                WidgetContent()
+                WidgetContent(context)
             }
         }
     }
 
     @Composable
-    private fun WidgetContent() {
+    private fun WidgetContent(context: Context) {
         Row(
             modifier = GlanceModifier
                 .background(GlanceTheme.colors.surface)
@@ -76,11 +75,10 @@ object MediumWidget : GlanceAppWidget() {
                 contentDescription = "",
                 backgroundColor = GlanceTheme.colors.primary,
                 contentColor = GlanceTheme.colors.onPrimary,
-                onClick = actionStartActivity<ShortcutActivity>()
+                onClick = actionStartActivity(WidgetHelper.createWidgetUnlockIntent(context))
             )
 
         }
     }
 
 }
-

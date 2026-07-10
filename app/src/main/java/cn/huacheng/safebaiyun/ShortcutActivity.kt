@@ -1,6 +1,9 @@
 package cn.huacheng.safebaiyun
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -17,9 +20,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import cn.huacheng.safebaiyun.unlock.DataRepo
 import cn.huacheng.safebaiyun.unlock.UnlockRepo
 import cn.huacheng.safebaiyun.util.showToast
+import kotlinx.coroutines.launch
 
 /**
  *
@@ -29,19 +34,21 @@ import cn.huacheng.safebaiyun.util.showToast
  */
 class ShortcutActivity : ComponentActivity() {
 
+    private var unlockStarted = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        Log.d("largetWidget","onCreate")
+        Log.d(TAG, "onCreate action=${intent?.action}")
         setContent {
             Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(modifier = Modifier.size(48.dp))
             }
         }
-        if (intent.action == Intent.ACTION_CREATE_SHORTCUT) {
-            createShortcut()
-        } else {
-            unlock()
+        when (intent?.action) {
+            Intent.ACTION_CREATE_SHORTCUT -> createShortcut()
+            ACTION_WIDGET_UNLOCK -> waitForBluetoothThenUnlock()
+            else -> unlock()
         }
     }
 
@@ -55,21 +62,56 @@ class ShortcutActivity : ComponentActivity() {
         finish()
     }
 
-    private fun unlock() {
-        val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
+    private fun waitForBluetoothThenUnlock() {
+        if (!hasBluetoothPermission()) {
+            unlock()
+            return
         }
 
-        if (!hasPermission || DataRepo.readData().first.isEmpty()) {
+        lifecycleScope.launch {
+            val enabled = awaitBluetoothEnabled(isEnabled = ::isBluetoothEnabled)
+            Log.d(TAG, "Bluetooth wait finished, enabled=$enabled")
+            unlock()
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun isBluetoothEnabled(): Boolean {
+        val bluetoothManager =
+            getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager ?: return false
+        return try {
+            bluetoothManager.adapter?.isEnabled == true
+        } catch (error: RuntimeException) {
+            Log.w(TAG, "Unable to read Bluetooth state", error)
+            false
+        }
+    }
+
+    private fun hasBluetoothPermission(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+
+    private fun unlock() {
+        if (unlockStarted) {
+            return
+        }
+        unlockStarted = true
+
+        if (!hasBluetoothPermission() || DataRepo.readData().first.isEmpty()) {
             showToast("请先初始化")
-            startActivity(Intent(this,MainActivity::class.java))
+            startActivity(Intent(this, MainActivity::class.java))
             finish()
             return
         }
         showToast("开始解锁门禁")
         UnlockRepo.unlock()
         finish()
+    }
+
+    companion object {
+        const val ACTION_WIDGET_UNLOCK =
+            "cn.huacheng.safebaiyun.action.WIDGET_UNLOCK"
+
+        private const val TAG = "ShortcutActivity"
     }
 }

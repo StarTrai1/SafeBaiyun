@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 @SuppressLint("MissingPermission")
 object UnlockRepo {
 
+    private const val TAG = "UnlockRepo"
     private const val MAGIC_SERVICE = "14839ac4-7d7e-415c-9a42-167340cf2339"
 
     private lateinit var gatt: BluetoothGatt
@@ -43,9 +44,20 @@ object UnlockRepo {
     val logFlow: MutableStateFlow<List<String>> = MutableStateFlow(logList.toList())
 
     fun unlock() {
-        val bluetoothAdapter =
-            (ContextHolder.get()
-                .getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
+        val bluetoothManager = ContextHolder.get()
+            .getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        val bluetoothAdapter = try {
+            bluetoothManager?.adapter
+        } catch (error: RuntimeException) {
+            Log.e(TAG, "Unable to obtain Bluetooth adapter", error)
+            null
+        }
+
+        if (bluetoothAdapter == null) {
+            log("蓝牙适配器不可用")
+            showToast("蓝牙服务暂不可用")
+            return
+        }
 
         config = DataRepo.readData()
 
@@ -53,36 +65,56 @@ object UnlockRepo {
             showToast("Mac地址格式错误")
             return
         }
-        connect(bluetoothAdapter)
+        if (!connect(bluetoothAdapter)) {
+            return
+        }
 
+        autoDisconnectJob?.cancel()
         autoDisconnectJob = GlobalScope.launch {
             delay(10000)
             if (isActive) {
                 log("10s超时，自动断开链接")
-                gatt.disconnect()
-                gatt.close()
+                runCatching {
+                    gatt.disconnect()
+                    gatt.close()
+                }.onFailure { error ->
+                    Log.e(TAG, "Unable to close timed-out GATT connection", error)
+                }
             }
         }
     }
 
-    private fun connect(bluetoothAdapter: BluetoothAdapter) {
-        val remoteDevice = bluetoothAdapter.getRemoteDevice(config.first)
-        gatt = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            remoteDevice.connectGatt(
-                ContextHolder.get(),
-                false,
-                callback,
-                BluetoothDevice.TRANSPORT_LE
-            )
-        } else {
-            remoteDevice.connectGatt(
-                ContextHolder.get(),
-                false,
-                callback
-            )
+    private fun connect(bluetoothAdapter: BluetoothAdapter): Boolean {
+        val newGatt: BluetoothGatt? = try {
+            val remoteDevice = bluetoothAdapter.getRemoteDevice(config.first)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                remoteDevice.connectGatt(
+                    ContextHolder.get(),
+                    false,
+                    callback,
+                    BluetoothDevice.TRANSPORT_LE
+                )
+            } else {
+                remoteDevice.connectGatt(
+                    ContextHolder.get(),
+                    false,
+                    callback
+                )
+            }
+        } catch (error: RuntimeException) {
+            Log.e(TAG, "Unable to start GATT connection", error)
+            null
         }
 
+        if (newGatt == null) {
+            log("创建蓝牙连接失败")
+            showToast("蓝牙连接失败，请稍后重试")
+            return false
+        }
+
+        gatt = newGatt
         log("尝试连接蓝牙 ${this::gatt.isInitialized}")
+        return true
     }
 
     private val callback = object : BluetoothGattCallback() {
