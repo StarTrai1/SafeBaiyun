@@ -58,6 +58,7 @@ object UnlockCoordinator {
         }
 
         val mode = UnlockModeRepo.currentMode()
+        var bluetoothEnabledByApp = false
         if (mode == UnlockMode.SHIZUKU) {
             val state = ShizukuBridge.prepare(context, launchIfStopped = true)
             if (state != ShizukuState.READY) {
@@ -71,6 +72,7 @@ object UnlockCoordinator {
                     showToast("Shizuku 打开蓝牙失败")
                     return UnlockStartResult.SHIZUKU_NOT_READY
                 }
+                bluetoothEnabledByApp = true
             }
             val enabled = awaitBluetoothEnabled(
                 isEnabled = { isBluetoothEnabled(applicationContext) },
@@ -88,7 +90,7 @@ object UnlockCoordinator {
 
         showToast("开始解锁门禁")
         val started = UnlockRepo.unlock { result ->
-            if (shouldDisableBluetoothAfterUnlock(mode, result)) {
+            if (shouldDisableBluetoothAfterUnlock(mode, result, bluetoothEnabledByApp)) {
                 applicationScope.launch {
                     closeBluetoothAfterUnlock(applicationContext)
                 }
@@ -133,4 +135,7 @@ object UnlockCoordinator {
 internal fun shouldDisableBluetoothAfterUnlock(
     mode: UnlockMode,
     result: UnlockResult,
-): Boolean = mode == UnlockMode.SHIZUKU && result == UnlockResult.SUCCESS
+    bluetoothEnabledByApp: Boolean,
+): Boolean = mode == UnlockMode.SHIZUKU &&
+    result == UnlockResult.SUCCESS &&
+    bluetoothEnabledByApp

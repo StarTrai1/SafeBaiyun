@@ -14,24 +14,46 @@ class UnlockCoordinatorPolicyTest {
             shouldDisableBluetoothAfterUnlock(
                 UnlockMode.SHIZUKU,
                 UnlockResult.SUCCESS,
+                bluetoothEnabledByApp = true,
             ),
         )
         assertFalse(
             shouldDisableBluetoothAfterUnlock(
                 UnlockMode.DEFAULT,
                 UnlockResult.SUCCESS,
+                bluetoothEnabledByApp = true,
             ),
         )
         assertFalse(
             shouldDisableBluetoothAfterUnlock(
                 UnlockMode.SHIZUKU,
                 UnlockResult.FAILURE,
+                bluetoothEnabledByApp = true,
             ),
         )
         assertFalse(
             shouldDisableBluetoothAfterUnlock(
                 UnlockMode.SHIZUKU,
                 UnlockResult.TIMEOUT,
+                bluetoothEnabledByApp = true,
+            ),
+        )
+    }
+
+    @Test
+    fun bluetoothAlreadyEnabledBeforeUnlockStaysEnabled() {
+        assertFalse(
+            shouldDisableBluetoothAfterUnlock(
+                UnlockMode.SHIZUKU,
+                UnlockResult.SUCCESS,
+                bluetoothEnabledByApp = false,
+            ),
+        )
+        assertFalse(
+            shouldDisableBluetoothAfterUnlock(
+                UnlockMode.SHIZUKU,
+                UnlockResult.FAILURE,
+                bluetoothEnabledByApp = false,
             ),
         )
     }
