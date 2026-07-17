@@ -132,12 +132,11 @@ object UnlockCoordinator {
 
     private fun showShizukuState(state: ShizukuState) {
         val message = when (state) {
-            ShizukuState.NOT_INSTALLED -> "未安装 Shizuku"
-            ShizukuState.NOT_RUNNING -> "请先启动 Shizuku"
-            ShizukuState.PERMISSION_REQUIRED -> "等待 Shizuku 授权"
-            ShizukuState.PERMISSION_DENIED -> "未授予 Shizuku 权限"
-            ShizukuState.UNSUPPORTED -> "Shizuku 版本过低"
-            ShizukuState.ERROR -> "Shizuku 状态异常"
+            ShizukuState.NOT_RUNNING -> "请先启动 Shizuku 或 Sui 服务"
+            ShizukuState.PERMISSION_REQUIRED -> "等待 Shizuku/Sui 授权"
+            ShizukuState.PERMISSION_DENIED -> "未授予 Shizuku/Sui 权限"
+            ShizukuState.UNSUPPORTED -> "Shizuku/Sui API 版本过低"
+            ShizukuState.ERROR -> "Shizuku/Sui 状态异常"
             ShizukuState.READY -> return
         }
         showToast(message)

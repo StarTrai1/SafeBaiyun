@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -17,9 +16,9 @@ import kotlin.coroutines.resume
 
 object ShizukuBridge {
 
-    const val PACKAGE_NAME = "moe.shizuku.privileged.api"
-
     private const val TAG = "ShizukuBridge"
+    // Sui has no standalone manager package; this is only used as a launch target.
+    private const val MANAGER_PACKAGE_NAME = "moe.shizuku.privileged.api"
     private const val PERMISSION_REQUEST_CODE = 4301
     private const val PERMISSION_TIMEOUT_MILLIS = 60_000L
 
@@ -36,11 +35,7 @@ object ShizukuBridge {
 
     private val binderDeadListener = Shizuku.OnBinderDeadListener {
         ShizukuBluetoothController.invalidate()
-        mutableState.value = if (isInstalled()) {
-            ShizukuState.NOT_RUNNING
-        } else {
-            ShizukuState.NOT_INSTALLED
-        }
+        mutableState.value = ShizukuState.NOT_RUNNING
     }
 
     fun initialize(context: Context) {
@@ -59,10 +54,8 @@ object ShizukuBridge {
             return mutableState.value
         }
 
-        val installed = isInstalled(context)
-        val binderAlive = installed && isBinderAlive()
+        val binderAlive = isBinderAlive()
         val state = resolveShizukuState(
-            installed = installed,
             binderAlive = binderAlive,
             preV11 = binderAlive &&
                 runCatching { Shizuku.isPreV11() }.getOrDefault(true),
@@ -99,34 +92,11 @@ object ShizukuBridge {
         return state
     }
 
-    fun isInstalled(context: Context? = applicationContext): Boolean {
-        if (context == null) {
-            return false
-        }
-        return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.packageManager.getPackageInfo(
-                    PACKAGE_NAME,
-                    PackageManager.PackageInfoFlags.of(0L),
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                context.packageManager.getPackageInfo(PACKAGE_NAME, 0)
-            }
-            true
-        } catch (_: PackageManager.NameNotFoundException) {
-            false
-        } catch (error: RuntimeException) {
-            Log.e(TAG, "Unable to query Shizuku package", error)
-            false
-        }
-    }
-
     private fun isBinderAlive(): Boolean =
         runCatching { Shizuku.pingBinder() }.getOrDefault(false)
 
     private fun openManager(context: Context): Boolean {
-        val intent = context.packageManager.getLaunchIntentForPackage(PACKAGE_NAME)
+        val intent = context.packageManager.getLaunchIntentForPackage(MANAGER_PACKAGE_NAME)
             ?: return false
         if (context !is Activity) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

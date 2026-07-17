@@ -6,14 +6,10 @@ import org.junit.Test
 class ShizukuStateTest {
 
     @Test
-    fun packageAndBinderStateTakePriority() {
-        assertEquals(
-            ShizukuState.NOT_INSTALLED,
-            resolveShizukuState(installed = false, binderAlive = false),
-        )
+    fun unavailableBinderReportsServiceNotRunning() {
         assertEquals(
             ShizukuState.NOT_RUNNING,
-            resolveShizukuState(installed = true, binderAlive = false),
+            resolveShizukuState(binderAlive = false),
         )
     }
 
@@ -21,16 +17,15 @@ class ShizukuStateTest {
     fun runningServiceReportsPermissionAndVersionStates() {
         assertEquals(
             ShizukuState.UNSUPPORTED,
-            resolveShizukuState(installed = true, binderAlive = true, preV11 = true),
+            resolveShizukuState(binderAlive = true, preV11 = true),
         )
         assertEquals(
             ShizukuState.PERMISSION_REQUIRED,
-            resolveShizukuState(installed = true, binderAlive = true),
+            resolveShizukuState(binderAlive = true),
         )
         assertEquals(
             ShizukuState.PERMISSION_DENIED,
             resolveShizukuState(
-                installed = true,
                 binderAlive = true,
                 permissionDenied = true,
             ),
@@ -38,7 +33,6 @@ class ShizukuStateTest {
         assertEquals(
             ShizukuState.READY,
             resolveShizukuState(
-                installed = true,
                 binderAlive = true,
                 permissionGranted = true,
             ),

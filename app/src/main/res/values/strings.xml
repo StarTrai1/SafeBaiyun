@@ -5,11 +5,10 @@
     <string name="unlock_mode">解锁模式</string>
     <string name="default_mode">默认模式</string>
     <string name="shizuku_mode">Shizuku 模式</string>
-    <string name="shizuku_not_installed">未安装 Shizuku</string>
-    <string name="shizuku_not_running">Shizuku 未运行</string>
-    <string name="shizuku_permission_required">等待 Shizuku 授权</string>
-    <string name="shizuku_permission_denied">未授予 Shizuku 权限</string>
-    <string name="shizuku_ready">Shizuku 已连接</string>
-    <string name="shizuku_unsupported">Shizuku 版本过低</string>
-    <string name="shizuku_error">Shizuku 状态异常</string>
+    <string name="shizuku_not_running">Shizuku/Sui 服务未运行</string>
+    <string name="shizuku_permission_required">等待 Shizuku/Sui 授权</string>
+    <string name="shizuku_permission_denied">未授予 Shizuku/Sui 权限</string>
+    <string name="shizuku_ready">Shizuku/Sui 已连接</string>
+    <string name="shizuku_unsupported">Shizuku/Sui API 版本过低</string>
+    <string name="shizuku_error">Shizuku/Sui 状态异常</string>
 </resources>

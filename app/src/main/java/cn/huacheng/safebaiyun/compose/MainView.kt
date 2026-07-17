@@ -178,7 +178,6 @@ private fun UnlockModeSelector(
 
 @Composable
 private fun shizukuStatusText(state: ShizukuState): String = when (state) {
-    ShizukuState.NOT_INSTALLED -> stringResource(R.string.shizuku_not_installed)
     ShizukuState.NOT_RUNNING -> stringResource(R.string.shizuku_not_running)
     ShizukuState.PERMISSION_REQUIRED -> stringResource(R.string.shizuku_permission_required)
     ShizukuState.PERMISSION_DENIED -> stringResource(R.string.shizuku_permission_denied)
@@ -189,12 +188,11 @@ private fun shizukuStatusText(state: ShizukuState): String = when (state) {
 
 private fun showShizukuSelectionResult(state: ShizukuState) {
     val message = when (state) {
-        ShizukuState.NOT_INSTALLED -> "未安装 Shizuku"
-        ShizukuState.NOT_RUNNING -> "请在 Shizuku 中启动服务"
-        ShizukuState.PERMISSION_DENIED -> "未授予 Shizuku 权限"
-        ShizukuState.UNSUPPORTED -> "Shizuku 版本过低"
-        ShizukuState.ERROR -> "Shizuku 状态异常"
-        ShizukuState.READY -> "Shizuku 模式已启用"
+        ShizukuState.NOT_RUNNING -> "请先启动 Shizuku 或 Sui 服务"
+        ShizukuState.PERMISSION_DENIED -> "未授予 Shizuku/Sui 权限"
+        ShizukuState.UNSUPPORTED -> "Shizuku/Sui API 版本过低"
+        ShizukuState.ERROR -> "Shizuku/Sui 状态异常"
+        ShizukuState.READY -> "Shizuku/Sui 模式已启用"
         ShizukuState.PERMISSION_REQUIRED -> return
     }
     showToast(message)
